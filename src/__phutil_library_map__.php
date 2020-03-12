@@ -15,10 +15,11 @@ phutil_register_library_map(array(
     'ImportMediaWikiWorkflowCategoriesWorkflow' => 'workflow/ImportMediaWikiWorkflowCategoriesWorkflow.php',
     'ImportMediaWikiWorkflowPagesWorkflow' => 'workflow/ImportMediaWikiWorkflowPagesWorkflow.php',
     'MediaWikiService' => 'service/MediaWikiService.php',
+    'PhrictionImage' => 'domain/PhrictionImage.php',
     'PhrictionCategory' => 'domain/PhrictionCategory.php',
     'PhrictionPage' => 'domain/PhrictionPage.php',
     'PhrictionService' => 'service/PhrictionService.php',
-    'ScriptUtils' => 'utils/ScriptUtils',
+    'ScriptUtils' => 'utils/ScriptUtils.php',
   ),
   'function' => array(),
   'xmap' => array(

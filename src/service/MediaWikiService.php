@@ -1,6 +1,6 @@
 <?php
 
-class MediaWikiService {
+class MediaWikiService extends Phobject {
   private $url;
   private $user;
   private $pass;
@@ -96,20 +96,37 @@ class MediaWikiService {
   }
 
   function getPageImagesByName(string $pageName) {
-    $api = $this->url."/api.php?action=query&format=json&prop=images&titles=".urlencode($pageName);
+    $api = $this->url."/api.php?action=query&format=json&prop=images&imlimit=100&titles=".urlencode($pageName);
     list($responseBody) = $this->getFuture($api);
     $data = json_decode($responseBody, true);
 
     $images = array();
     if (count($data['query']) > 0 && count($data['query']['pages']) > 0) {
-      foreach ($data['query']['pages'] as $page){
-        if(count($page['images']) > 0){
+      foreach ($data['query']['pages'] as $page) {
+        if (array_key_exists('images', $page) && count($page['images']) > 0) {
           $images = $page['images'];
         }
       }
     }
 
-    return images;
+    $result = array();
+    foreach ($images as $image) {
+      $api = $this->url."/api.php?action=query&prop=imageinfo&format=json&iiprop=timestamp|user|url&titles=".urlencode($image['title']);
+      list($responseBody) = $this->getFuture($api);
+      $data = json_decode($responseBody, true);
+
+      if (count($data['query']) > 0 && count($data['query']['pages']) > 0) {
+        foreach ($data['query']['pages'] as $page) {
+          if ($page['imageinfo'] !== null) {
+            $phImage = new PhrictionImage($page['title'], $page['imageinfo'][0]['url']);
+            $result[] = $phImage;
+            break;
+          }
+        }
+      }
+    }
+    return $result;
+
   }
 
   /**

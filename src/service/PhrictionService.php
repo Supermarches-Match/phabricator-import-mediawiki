@@ -1,14 +1,17 @@
 <?php
 
-class PhrictionService {
+class PhrictionService extends Phobject {
   private $client;
+  private $replace;
 
   /**
    * PhrictionService constructor.
    * @param string $token
+   * @param bool   $replace
    * @throws Exception
    */
-  public function __construct(string $token) {
+  public function __construct(string $token, bool $replace) {
+    $this->replace = $replace;
     if ($token == null) {
       throw new Exception("Failed to create client for conduit API : Token API cannot be null");
     }
@@ -18,7 +21,7 @@ class PhrictionService {
 
   /**
    * @param string $url
-   * @return bool|null
+   * @return wild|null
    */
   public function getPageByUrl(string $url) {
     try {
@@ -26,7 +29,7 @@ class PhrictionService {
         'queryKey' => 'all',
         'constraints' => array(
           'paths' => array(
-            "'".strtolower($url)."'",
+            $url,
           ),
         ),
         'attachments' => array(
@@ -34,10 +37,7 @@ class PhrictionService {
         )
       );
       $result = $this->client->callMethodSynchronous('phriction.document.search', $apiParameters);
-      if ($result['status'] == 'exists' && array_key_exists('data', $result) && count($result['data']) > 0) {
-        return $result['data'][0];
-      }
-      return null;
+      return idxv($result, array('data', 0));
     } catch (Exception $e) {
       phlog($e);
       return null;
@@ -46,6 +46,22 @@ class PhrictionService {
 
   public function postPage(AbstractPhrictionPage $phriction) {
     $page = $this->getPageByUrl($phriction->getUrl()."/");
+    $content = $page != null ? idxv(
+      $page,
+      array(
+        'attachments',
+        'content',
+        'content',
+        'raw',
+      )) : null;
+
+    $status = $page != null ? idxv(
+      $page,
+      array(
+        'fields',
+        'status',
+        'value'
+      )) : null;
 
     $apiParameters = array(
       "slug" => $phriction->getUrl(),
@@ -54,19 +70,71 @@ class PhrictionService {
       "description" => "Importé depuis ".$phriction->getOrigin()
     );
 
-    $result = null;
-    try {
-      if ($page != null) {
-        if ($page['attachments']['content']['content']['raw'] == $phriction->getContent())
-          $result = $this->client->callMethodSynchronous('phriction.edit', $apiParameters);
+    if ($page != null) {
+      if ($this->replace && ($content !== $phriction->getContent() || $status === "deleted")) {
+        $result = $this->client->callMethodSynchronous('phriction.edit', $apiParameters);
+        return $result != null && $result['status'];
       } else {
-        $result = $this->client->callMethodSynchronous('phriction.create', $apiParameters);
+        return true;
       }
-
+    } else {
+      $result = $this->client->callMethodSynchronous('phriction.create', $apiParameters);
       return $result != null && $result['status'];
-    } catch (Exception $e) {
-      phlog($e);
-      return false;
+    }
+  }
+
+  public function getIdImage(PhrictionImage $image) {
+    $api_parameters = array(
+      'queryKey' => 'all',
+      'constraints' => array(
+        'name' => ScriptUtils::removeAccents($image->getTitle()),
+      ),
+    );
+
+    $result = $this->client->callMethodSynchronous('file.search', $api_parameters);
+    if ($result !== null && count($result['data']) > 0) {
+      $this->getPhrictionId($image, $result);
+    } else {
+      $imagedata = file_get_contents($image->getUrl());
+      $base64 = base64_encode($imagedata);
+
+      $api_parameters = array(
+        'data_base64' => $base64,
+        'name' => ScriptUtils::removeAccents($image->getTitle()),
+      );
+
+      $result = $this->client->callMethodSynchronous('file.upload', $api_parameters);
+      if ($result !== null && strpos($result, "PHID-FILE") !== false) {
+        echo tsprintf(" * * %s\n", pht('Image %s imported.', $image->getTitle()));
+
+        $api_parameters = array(
+          'queryKey' => 'all',
+          'constraints' => array(
+            'phids' => array(
+              $result,
+            ),
+          ),
+        );
+
+        $result = $this->client->callMethodSynchronous('file.search', $api_parameters);
+        if ($result !== null && count($result['data']) > 0) {
+          $this->getPhrictionId($image, $result);
+        }
+      }
+    }
+    return $image;
+  }
+
+  /**
+   * @param PhrictionImage $image
+   * @param                $result
+   */
+  private function getPhrictionId(PhrictionImage $image, $result): void {
+    foreach ($result['data'] as $data) {
+      if ($data['fields']['name'] === ScriptUtils::removeAccents($image->getTitle())) {
+        $image->setPrhictionId($data['id']);
+        break;
+      }
     }
   }
 

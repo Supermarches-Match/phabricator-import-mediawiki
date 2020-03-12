@@ -44,12 +44,13 @@ final class ImportMediaWikiWorkflowPagesWorkflow
 
     $action = $args->getArg('action');
     if ($action === null) {
-      $action = 'replace';
+      $action = true;
     } else {
       $all_actions = array('insert', 'replace');
       if (!in_array($action, $all_actions)) {
         $args->printHelpAndExit();
       }
+      $action = $action === 'replace';
     }
 
     try {
@@ -59,7 +60,7 @@ final class ImportMediaWikiWorkflowPagesWorkflow
     }
 
     try {
-      $phrictionService = new PhrictionService($config->conduit->token);
+      $phrictionService = new PhrictionService($config->conduit->token, $action);
     } catch (Exception $e) {
       die("Error creating conduit client : [$e->getCode()] $e->getMessage()");
     }
@@ -75,7 +76,7 @@ final class ImportMediaWikiWorkflowPagesWorkflow
     ScriptUtils::separator();
 
     $pages = array();
-    if(property_exists($config, 'pages') && count($config->pages) > 0){
+    if (property_exists($config, 'pages') && count($config->pages) > 0) {
       echo " * Convert all specified pages with their categories\n";
       $pages = $config->pages;
     } else {

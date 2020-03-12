@@ -1,13 +1,20 @@
 <?php
 
-class ConverterService {
+class ConverterService extends Phobject {
   const REPLACE_STANDARD_TAG_REGEX = array(
+    //Remove html tag not use in phriction
+    '#(?:<center>)+([\w\W]+?)(?:</center>)+#' => "\$1",
+    '#(?:<font(?:[^>])*>)+((?:[^>])*)(?:</font>)+#' => "\$1",
+
+    //Remove <br> in header
+    '/\n*(=+)([^\=<>]+)(<br>|<br\s*\/>)+(\s+)(=+)\n+/' => "\n\n\$1\$2\$4\$5\n",
+
     // replace bolded or italicized headers with regular headers
     // and make sure there are empty lines around headers
     '/\n+(=+)\'*([^\'=]+)\'*(=+)\n+/' => "\n\n\$1\$2\$3\n\n",
 
     // bullet space
-    '/^[[:blank:]]*([*#]{1})[[:blank:]]*/' => "\$1 ",
+    '/^[[:blank:]]*([*#]+)[[:blank:]]*([^#*<>]+)((<br>|<br\s*\/>)*)/m' => "\$1 \$2",
 
     // use two spaces for pre-formatted block, and make sure there is a blank line before
     '/\n+ +/' => "\n\n  ",
@@ -19,7 +26,7 @@ class ConverterService {
     '#\n*<blockquote>([\w\W]+?)</blockquote>\n*#' => "\n> $1\n\n",
 
     // replace <source> with > and ensure a blank line
-    '#\n*<source(?:\s*)(?:(lang=)"(\w*)")?>(?:\n)([\w\W]+?)</source>\n*#' => "\n```\n$1$2\n$3\n```\n",
+    '#\n*<source(?:\s*)(?:(lang=)"(\w*)")?>(?:\n*)([\w\W]+?)</source>\n*#' => "\n```\n$1$2\n$3\n```\n",
 
     // use [[...]] instead of [...] for external links
     '/([^[])\[(http[^ ]+) ([^\]]+)\]/' => '$1[[$2|$3]]',
@@ -27,22 +34,41 @@ class ConverterService {
     // bold
     "/'''+/" => '**',
 
+    // underline
+    '#<u>([\w\W]+?)</u>#' => "__\$1__",
+
+    // strike
+    '#<strike>([\w\W]+?)</strike>#' => "~~\$1~~",
+
     // new lines need not be forced
     '#<br\s*/?>#' => "\n",
 
     //Divider
-    '/(\n*----\n*)/' => "\n\n---\n\n",
+    '/^(\n*)([-]{4}){1}\n*/m' => "\n\n---\n\n",
 
     //source
-    '/\n*<source(?:\s*)(?:(lang=)"(\w*)")?>(?:\n)([\w\W]+?)<\/source>\n*/' => "\n```\n$1$2\n$3\n```\n"
+    '/\n*<source(?:\s*)(?:(lang=)"(\w*)")?>(?:\n)([\w\W]+?)<\/source>\n*/' => "\n```\n$1$2\n$3\n```\n",
+
+    //Category
+    '/(\[\[category:(([^|\]])+)(?:([^\]])*)\]\])(\s*)(\n*)/i' => "[[catégories/$2|Catégorie $2]]\n",
+
+
+    //=> to ->
+    '/(=(&gt;|>))/' => "->",
+
+    //Remove cartouche
+    '/(?:\n*)(?:{{Cartouche(?:[^{])+)}}/i' => "",
+    '/(?:\n*)(?:{{Doc(?:[^{])+)}}/i' => "",
+    '/(?:\n*)(?:{{tdm(?:[^{])+)}}/i' => "",
   );
 
   const EXTRACT_TABLE_REGEX = '#^\{\|(.*?)(?:^\|\+(.*?))?(^(?:((?R))|.)*?)^\|}#msi';
   const EXTRACT_TABLE_CONTENT_REGEX = '#(?:^([|!])-|\G)(.*?)^(.+?)(?=^[|!]-|\z)#msi';
   const EXTRACT_LINE_CONTENT_REGEX = '#((?:^\||^!|\|\||!!|\G))(?:([^|\n]*?)\|(?!\|))?(?:\n*)(.+?)(?:\n*)(?=^\||^!|\|\||!!|\z)#msi';
-  const EXTRACT_CELL_ATTRIBUTE_REGEX = '/(?:((colspan|rowspan|color|bgcolor)="?(#?\w+)")+)/';
-  const EXTRACT_CATEGORY_REGEX = '/\[\[category:([^\]]+)\]\]/i';
-  const EXTRACT_IMAGES_REGEX = '/\[\[Image:([^\]|]+)[|]?(?:[^\]]*)\]\]/';
+  const EXTRACT_CELL_ATTRIBUTE_REGEX = '/(?:((colspan=|rowspan=|bgcolor=|background-color:|color[:=])"?(#?\w+)"?)+)/';
+  const EXTRACT_CATEGORY_REGEX = '/\[\[category:catégories\/([^\]]+)\]\]/i';
+  const EXTRACT_IMAGES_REGEX = '/(?:\[\[Image:|File:|Media:)([^\]|]+)(?:(?:[|][^\]|]*)*[\]]{2})/';
+  const EXTRACT_LINK_INTERNAL = '/\[\[((?!Category:|Image:|File:|Images:|Files:|http:|https:|Media:|catégories\/)(?:[^\]]+))\]\]/i';
 
 
   /**
@@ -64,16 +90,56 @@ class ConverterService {
     // tables
     $pageContent = preg_replace_callback(self::EXTRACT_TABLE_REGEX, 'ConverterService::processTables', $pageContent);
 
-    $phriction->setContent($pageContent);
-
     if (preg_match_all(self::EXTRACT_CATEGORY_REGEX, $pageContent, $catMatch)) {
-      foreach ($catMatch[1] as $cat) {
-        if (in_array($cat, $categories)) {
-          $phriction->addCategory($cat);
+      if ($catMatch !== null && count($catMatch) > 0) {
+        foreach ($catMatch[1] as $cat) {
+          if (in_array($cat, $categories)) {
+            $phriction->addCategory($cat);
+          }
         }
       }
-      $phriction->setPrefix(strtolower($phriction->getCategories()[0])."/");
     }
+
+    $linkMatch = array();
+    $i = 0;
+    if (preg_match_all(self::EXTRACT_LINK_INTERNAL, $pageContent, $linkMatch)) {
+      if ($linkMatch !== null && count($linkMatch) > 0) {
+        foreach ($linkMatch[1] as $link) {
+          $split = preg_split('/[|]/', $link);
+          if (count($split) > 1) {
+            $newLink = "[[pages/".mb_strtolower(preg_replace(ScriptUtils::PHRICTION_URL_REGEX, "_", $split[0]))."|".$split[1]."]]";
+          } else {
+            $newLink = "[[pages/".mb_strtolower(preg_replace(ScriptUtils::PHRICTION_URL_REGEX, "_", $link))."|".$link."]]";
+          }
+          $pageContent = str_replace($linkMatch[0][$i], $newLink, $pageContent);
+          $i++;
+        }
+      }
+    }
+
+    $imagesMatch = array();
+    $j = 0;
+    if (preg_match_all(self::EXTRACT_IMAGES_REGEX, $pageContent, $imagesMatch)) {
+      if ($imagesMatch !== null && count($imagesMatch) > 0) {
+        foreach ($imagesMatch[1] as $image) {
+          foreach ($phriction->getImages() as $phImage) {
+            if ($phImage->getTitle() === $image || str_replace(" ", "_", $phImage->getTitle()) === $image) {
+              if (strpos($imagesMatch[0][$j], "[[") !== false) {
+                $pageContent = str_replace($imagesMatch[0][$j], "{F".$phImage->getPrhictionId()."}", $pageContent);
+              } else {
+                $pageContent = str_replace("[[".$imagesMatch[0][$j], "{F".$phImage->getPrhictionId()."}", $pageContent);
+              }
+              break;
+            }
+          }
+          $j++;
+        }
+      }
+    }
+
+    $pageContent = html_entity_decode($pageContent, ENT_NOQUOTES);
+
+    $phriction->setContent($pageContent);
 
     return $phriction;
   }
@@ -108,8 +174,11 @@ class ConverterService {
     $i = 0;
     $attributes = "";
     foreach ($attrs[2] as $attr) {
+      $attr = rtrim($attr, "=:");
       if ($attr === 'colspan' || $attr === 'rowspan' || $attr === 'color' || $attr === 'bgcolor') {
         $attributes = $attributes." ".$attr."=".$attrs[3][$i];
+      } else if ($attr === 'background-color') {
+        $attributes = $attributes." bgcolor=".$attrs[3][$i];
       }
       $i++;
     }

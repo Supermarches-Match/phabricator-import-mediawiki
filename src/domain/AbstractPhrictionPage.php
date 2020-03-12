@@ -1,6 +1,6 @@
 <?php
 
-class AbstractPhrictionPage {
+class AbstractPhrictionPage extends Phobject {
   protected $title;
   private $safeTitle;
   protected $origin;
@@ -9,15 +9,16 @@ class AbstractPhrictionPage {
 
   /**
    * PhrictionCategory constructor.
-   * @param $title
-   * @param $content
+   * @param string $title
+   * @param string $content
+   * @param string $wikiUrl
    */
   public function __construct(string $title, string $content, string $wikiUrl) {
     $this->title = $title;
     $this->content = $content;
     $this->safeTitle = str_replace(' ', '_', $this->title);
     $this->origin = $wikiUrl."index.php/".$this->safeTitle;
-    $this->url = strtolower(str_replace(' ', '_', $this->title));
+    $this->url = mb_strtolower(preg_replace(ScriptUtils::PHRICTION_URL_REGEX, "_", $this->title));
   }
 
   /**
