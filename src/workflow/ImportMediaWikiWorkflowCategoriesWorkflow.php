@@ -114,6 +114,13 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
         if (property_exists($categoryPage, "pageid") && trim($categoryPage->pageid !== "")) {
           $pageContent = $mediaWikiService->getPageDataById($categoryPage->pageid);
         }
+
+        if($pageContent === ""){
+          echo " * * No content\n";
+          ScriptUtils::separator();
+          continue;
+        }
+
         $phrictionPage = new PhrictionPage($categoryPage->title, $pageContent, $config->wiki->url);
 
         if (in_array($categoryPage->pageid, $pageFinished)) {
@@ -131,6 +138,12 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
 
         $phrictionPage->setImages($images);
         $converterService->convertMediaWikiContentToPhriction($phrictionPage, $categories);
+
+        if($phrictionPage->getContent() === ""){
+          echo " * * No content\n";
+          ScriptUtils::separator();
+          continue;
+        }
 
         if (count($phrictionPage->getCategories()) > 0) {
           //page with prefix must have prefix created before page

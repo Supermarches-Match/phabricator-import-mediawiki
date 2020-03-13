@@ -71,26 +71,63 @@ final class ImportMediaWikiWorkflowPagesWorkflow
       die("Error creating converter service : [$e->getCode()] $e->getMessage()");
     }
 
+    $pageFinished = array();
+
     $start = new DateTimeImmutable();
     echo "Started at : ".$start->format("Y-m-d H:i:s")."\n";
     ScriptUtils::separator();
 
-    $pages = array();
     if (property_exists($config, 'pages') && count($config->pages) > 0) {
-      echo " * Convert all specified pages with their categories\n";
+      echo " * Convert all specified pages\n";
       $pages = $config->pages;
     } else {
-      echo " * Convert all pages with their categories\n";
+      echo " * Convert all pages \n";
       $pages = $mediaWikiService->getAllPages();
     }
     echo " * ".count($pages)." pages will be imported\n";
-
     ScriptUtils::separator();
 
-    foreach ($pages as $page) {
+    foreach ($pages as $wikiPage) {
+      if (!property_exists($wikiPage, 'title')) {
+        $wikiPage = $mediaWikiService->getPageDataByTitle($wikiPage);
+      }
+      echo " * Process $wikiPage->title\n";
 
+      $pageContent = '';
+      if (property_exists($wikiPage, "pageid") && trim($wikiPage->pageid !== "")) {
+        $pageContent = $mediaWikiService->getPageDataById($wikiPage->pageid);
+      }
+
+
+      if ($pageContent === "") {
+        echo " * * No content\n";
+        ScriptUtils::separator();
+        continue;
+      }
+
+      $phrictionPage = new PhrictionPage($wikiPage->title, $pageContent, $config->wiki->url);
+
+      $images = $mediaWikiService->getPageImagesByName($phrictionPage->getSafeTitle());
+      if (count($images) > 0) {
+        foreach ($images as $image) {
+          $phrictionService->getIdImage($image);
+        }
+      }
+
+      $phrictionPage->setImages($images);
+      $converterService->convertMediaWikiContentToPhriction($phrictionPage, array());
+
+      if ($phrictionPage->getContent() === "") {
+        echo " * * No content\n";
+        ScriptUtils::separator();
+        continue;
+      }
+
+      if ($phrictionService->postPage($phrictionPage)) {
+        echo ' * * imported as '.$phrictionPage->getUrl()."\n";
+      }
+      ScriptUtils::separator();
     }
-
 
     $end = new DateTimeImmutable();
     $execution = $end->diff($start);

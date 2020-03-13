@@ -1,8 +1,16 @@
 <?php
 
 final class ScriptUtils extends Phobject {
-  const PHRICTION_URL_REGEX = "/(\s*[&\/\']\s*)|(\s)/";
+  const PHRICTION_URL_REGEX = "/(\W\s*)+/";
 
+  public static function formatUrl(string $str){
+    $str = ScriptUtils::removeAccents($str);
+    $str = preg_replace(ScriptUtils::PHRICTION_URL_REGEX, "_", $str);
+    $str = preg_replace('/[_]{2,}/', "_", $str);
+    $str = rtrim($str, "_");
+    $str = substr ( $str , 0, 100);
+    return mb_strtolower($str);
+  }
 
   public static function separator() {
     echo "----------------------------------------------------\n";

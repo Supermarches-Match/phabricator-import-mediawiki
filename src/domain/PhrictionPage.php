@@ -16,6 +16,9 @@ class PhrictionPage extends AbstractPhrictionPage {
     $this->categories = array();
     $this->images = null;
     $this->prefix = "pages/";
+    if(mb_strtolower($title) === "accueil"){
+      $this->prefix = "";
+    }
   }
 
   /**

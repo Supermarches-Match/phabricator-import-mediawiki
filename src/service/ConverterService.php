@@ -5,6 +5,7 @@ class ConverterService extends Phobject {
     //Remove html tag not use in phriction
     '#(?:<center>)+([\w\W]+?)(?:</center>)+#' => "\$1",
     '#(?:<font(?:[^>])*>)+((?:[^>])*)(?:</font>)+#' => "\$1",
+    '#(?:<div(?:[^>])*>)+((?:[^>])*)(?:</div>)+#' => "\$1",
 
     //Remove <br> in header
     '/\n*(=+)([^\=<>]+)(<br>|<br\s*\/>)+(\s+)(=+)\n+/' => "\n\n\$1\$2\$4\$5\n",
@@ -60,6 +61,7 @@ class ConverterService extends Phobject {
     '/(?:\n*)(?:{{Cartouche(?:[^{])+)}}/i' => "",
     '/(?:\n*)(?:{{Doc(?:[^{])+)}}/i' => "",
     '/(?:\n*)(?:{{tdm(?:[^{])+)}}/i' => "",
+    '/\n*__NOTOC__(\n|\s)+/i' => "",
   );
 
   const EXTRACT_TABLE_REGEX = '#^\{\|(.*?)(?:^\|\+(.*?))?(^(?:((?R))|.)*?)^\|}#msi';
@@ -106,12 +108,24 @@ class ConverterService extends Phobject {
       if ($linkMatch !== null && count($linkMatch) > 0) {
         foreach ($linkMatch[1] as $link) {
           $split = preg_split('/[|]/', $link);
-          if (count($split) > 1) {
-            $newLink = "[[pages/".mb_strtolower(preg_replace(ScriptUtils::PHRICTION_URL_REGEX, "_", $split[0]))."|".$split[1]."]]";
+
+          if (strpos(mb_strtolower($link), ':catégorie:') === false) {
+            if (count($split) > 1) {
+              $newLink = "[[pages/".ScriptUtils::formatUrl($split[0])."|".$split[1]."]]";
+            } else {
+              $newLink = "[[pages/".ScriptUtils::formatUrl($link)."|".$link."]]";
+            }
           } else {
-            $newLink = "[[pages/".mb_strtolower(preg_replace(ScriptUtils::PHRICTION_URL_REGEX, "_", $link))."|".$link."]]";
+            if (count($split) > 1) {
+              $link = preg_replace( "/:catégorie:/i", "", $split[0]);
+              $newLink = "[[catégories/".ScriptUtils::formatUrl($link)."|".$split[1]."]]";
+            } else {
+              $link = preg_replace( "/:catégorie:/i", "", $link);
+              $newLink = "[[catégories/".ScriptUtils::formatUrl($link)."|".$link."]]";
+            }
           }
           $pageContent = str_replace($linkMatch[0][$i], $newLink, $pageContent);
+
           $i++;
         }
       }
@@ -162,7 +176,8 @@ class ConverterService extends Phobject {
     $sub = preg_replace_callback(self::EXTRACT_LINE_CONTENT_REGEX, 'ConverterService::processCells', $matches[3]);
 
     if ($matches[3][0] == '!') {
-      $sub = str_replace('td>', 'th>', $sub);
+      $sub = preg_replace('/[<]td([^>]*)[>]/', "<th\$1\$2>", $sub);
+      $sub = preg_replace('/[<][\/]td[>]/', "</th>", $sub);
     }
     return "<tr>$sub</tr>\n";
   }

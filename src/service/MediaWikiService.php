@@ -95,6 +95,22 @@ class MediaWikiService extends Phobject {
     return $data->query->pages->{$pageId}->revisions[0]->{'*'};
   }
 
+  function getPageDataByTitle(string $title) {
+    $api = $this->url."/api.php?action=query&format=json&prop=revisions&rvprop=content&titles=".$title;
+    list($responseBody) = $this->getFuture($api);
+    $data = json_decode($responseBody);
+
+    if ($data == null || !property_exists($data->query, 'pages')) {
+      return null;
+    }
+    foreach ($data->query->pages as $result) {
+      if (mb_strtolower($result->title) === mb_strtolower($title)) {
+        return $result;
+      }
+    }
+    return $data->query->pages->{$title}->revisions[0]->{'*'};
+  }
+
   function getPageImagesByName(string $pageName) {
     $api = $this->url."/api.php?action=query&format=json&prop=images&imlimit=100&titles=".urlencode($pageName);
     list($responseBody) = $this->getFuture($api);
@@ -117,7 +133,7 @@ class MediaWikiService extends Phobject {
 
       if (count($data['query']) > 0 && count($data['query']['pages']) > 0) {
         foreach ($data['query']['pages'] as $page) {
-          if ($page['imageinfo'] !== null) {
+          if (in_array('imageinfo', $page) && $page['imageinfo'] !== null) {
             $phImage = new PhrictionImage($page['title'], $page['imageinfo'][0]['url']);
             $result[] = $phImage;
             break;
