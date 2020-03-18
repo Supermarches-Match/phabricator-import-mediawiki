@@ -80,3 +80,13 @@ All page will be in path **pages/**
 ```
 $ ./bin/import-mediawiki pages --config import-config.json
 ```
+
+Contributing
+=================
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+Please make sure to update tests as appropriate.
+
+Support
+================= 
+Supermarches Match does not provide support for this extension and cannot be held responsible for the use of this extension
