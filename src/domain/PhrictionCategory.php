@@ -6,8 +6,9 @@ class PhrictionCategory extends AbstractPhrictionPage {
 
   /**
    * PhrictionCategory constructor.
-   * @param $title
-   * @param $content
+   * @param string $title
+   * @param string $content
+   * @param string $wikiUrl
    */
   public function __construct(string $title, string $content, string $wikiUrl) {
     parent::__construct($title, $content, $wikiUrl);
@@ -44,4 +45,13 @@ class PhrictionCategory extends AbstractPhrictionPage {
   public function setPages(array $pages): void {
     $this->pages = $pages;
   }
+
+  /**
+   * @return string
+   */
+  public function getUrl(): string {
+    return "Catégories/".parent::getUrl();
+  }
+
+
 }

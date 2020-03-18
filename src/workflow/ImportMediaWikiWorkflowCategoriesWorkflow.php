@@ -44,12 +44,13 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
 
     $action = $args->getArg('action');
     if ($action === null) {
-      $action = 'replace';
+      $action = true;
     } else {
       $all_actions = array('insert', 'replace');
       if (!in_array($action, $all_actions)) {
         $args->printHelpAndExit();
       }
+      $action = $action === 'replace';
     }
 
     try {
@@ -59,7 +60,7 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
     }
 
     try {
-      $phrictionService = new PhrictionService($config->conduit->token);
+      $phrictionService = new PhrictionService($config->conduit->token, $action);
     } catch (Exception $e) {
       die("Error creating conduit client : [$e->getCode()] $e->getMessage()");
     }
@@ -69,6 +70,8 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
     } catch (Exception $e) {
       die("Error creating converter service : [$e->getCode()] $e->getMessage()");
     }
+
+    $pageFinished = array();
 
     $start = new DateTimeImmutable();
     echo "Started at : ".$start->format("Y-m-d H:i:s")."\n";
@@ -81,8 +84,11 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
       echo " * Convert all categories with their pages\n";
       $categories = $mediaWikiService->getAllCategories();
     }
+
     echo " * ".count($categories)." categories will be imported\n";
     ScriptUtils::separator();
+
+    $parentContent = "";
 
     foreach ($categories as $categoryName) {
       if ($categoryName == null && trim($categoryName) === "") {
@@ -108,28 +114,61 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
         if (property_exists($categoryPage, "pageid") && trim($categoryPage->pageid !== "")) {
           $pageContent = $mediaWikiService->getPageDataById($categoryPage->pageid);
         }
+
+        if($pageContent === ""){
+          echo " * * No content\n";
+          ScriptUtils::separator();
+          continue;
+        }
+
         $phrictionPage = new PhrictionPage($categoryPage->title, $pageContent, $config->wiki->url);
 
+        if (in_array($categoryPage->pageid, $pageFinished)) {
+          $category->setContent($category->getContent()."* [[{$phrictionPage->getUrl()}|{$phrictionPage->getTitle()}]]\n");
+          echo " * * $categoryPage->title already done\n";
+          continue;
+        }
+
         $images = $mediaWikiService->getPageImagesByName($phrictionPage->getSafeTitle());
+        if (count($images) > 0) {
+          foreach ($images as $image) {
+            $phrictionService->getIdImage($image);
+          }
+        }
 
-
+        $phrictionPage->setImages($images);
         $converterService->convertMediaWikiContentToPhriction($phrictionPage, $categories);
+
+        if($phrictionPage->getContent() === ""){
+          echo " * * No content\n";
+          ScriptUtils::separator();
+          continue;
+        }
 
         if (count($phrictionPage->getCategories()) > 0) {
           //page with prefix must have prefix created before page
-          $cat = new PhrictionCategory($phrictionPage->getCategories()[0], '', $config->wiki->url);
+          $cat = new PhrictionCategory($phrictionPage->getCategories()[0], 'To be completed', $config->wiki->url);
           $phrictionService->postPage($cat);
         }
 
         if ($phrictionService->postPage($phrictionPage)) {
-          echo 'imported as '.$phrictionPage->getUrl();
+          echo ' * * imported as '.$phrictionPage->getUrl()."\n";
           $category->setContent($category->getContent()."* [[{$phrictionPage->getUrl()}|{$phrictionPage->getTitle()}]]\n");
         }
-        ScriptUtils::separator();
+        $pageFinished[] = $categoryPage->pageid;
       }
       if ($phrictionService->postPage($category)) {
-        echo 'imported as '.$category->getUrl();
+        echo ' * imported as '.$category->getUrl()."\n";
+        $parentContent = $parentContent."* [[{$category->getUrl()}|{$category->getTitle()}]]\n";
       }
+      ScriptUtils::separator();
+    }
+
+    $parentCat = new PhrictionPage("Catégories", $parentContent, $config->wiki->url);
+    $parentCat->setPrefix('');
+    $parentCat->setOrigin($config->wiki->url."/index.php/Spécial:Catégories");
+    if ($phrictionService->postPage($parentCat)) {
+      echo "Parent categories created\n";
     }
 
     $end = new DateTimeImmutable();

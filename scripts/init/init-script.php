@@ -4,7 +4,7 @@ function init_script(array $options = array()) {
   error_reporting(E_ALL | E_STRICT);
   ini_set('display_errors', 1);
 
-  $rootdir = dirname(dirname(dirname(dirname(dirname(dirname(dirname(__FILE__)))))));
+  $rootdir = dirname(dirname(dirname(dirname(__FILE__))));
 
   $include_path = ini_get('include_path');
   ini_set(
