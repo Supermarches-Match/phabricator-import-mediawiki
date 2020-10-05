@@ -1,11 +1,11 @@
 <?php
 
-final class ScriptUtils extends Phobject {
+final class ScriptingUtils extends Phobject {
   const PHRICTION_URL_REGEX = "/(\W\s*)+/";
 
   public static function formatUrl(string $str){
-    $str = ScriptUtils::removeAccents($str);
-    $str = preg_replace(ScriptUtils::PHRICTION_URL_REGEX, "_", $str);
+    $str = ScriptingUtils::removeAccents($str);
+    $str = preg_replace(ScriptingUtils::PHRICTION_URL_REGEX, "_", $str);
     $str = preg_replace('/[_]{2,}/', "_", $str);
     $str = rtrim($str, "_");
     $str = substr ( $str , 0, 100);

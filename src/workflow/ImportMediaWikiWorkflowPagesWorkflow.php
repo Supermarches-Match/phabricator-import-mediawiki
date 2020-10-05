@@ -75,7 +75,7 @@ final class ImportMediaWikiWorkflowPagesWorkflow
 
     $start = new DateTimeImmutable();
     echo "Started at : ".$start->format("Y-m-d H:i:s")."\n";
-    ScriptUtils::separator();
+    ScriptingUtils::separator();
 
     if (property_exists($config, 'pages') && count($config->pages) > 0) {
       echo " * Convert all specified pages\n";
@@ -85,7 +85,7 @@ final class ImportMediaWikiWorkflowPagesWorkflow
       $pages = $mediaWikiService->getAllPages();
     }
     echo " * ".count($pages)." pages will be imported\n";
-    ScriptUtils::separator();
+    ScriptingUtils::separator();
 
     foreach ($pages as $wikiPage) {
       if (!property_exists($wikiPage, 'title')) {
@@ -101,7 +101,7 @@ final class ImportMediaWikiWorkflowPagesWorkflow
 
       if ($pageContent === "") {
         echo " * * No content\n";
-        ScriptUtils::separator();
+        ScriptingUtils::separator();
         continue;
       }
 
@@ -119,14 +119,14 @@ final class ImportMediaWikiWorkflowPagesWorkflow
 
       if ($phrictionPage->getContent() === "") {
         echo " * * No content\n";
-        ScriptUtils::separator();
+        ScriptingUtils::separator();
         continue;
       }
 
       if ($phrictionService->postPage($phrictionPage)) {
         echo ' * * imported as '.$phrictionPage->getUrl()."\n";
       }
-      ScriptUtils::separator();
+      ScriptingUtils::separator();
     }
 
     $end = new DateTimeImmutable();

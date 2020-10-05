@@ -75,7 +75,7 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
 
     $start = new DateTimeImmutable();
     echo "Started at : ".$start->format("Y-m-d H:i:s")."\n";
-    ScriptUtils::separator();
+    ScriptingUtils::separator();
 
     if (property_exists($config, 'categories') && count($config->categories) > 0) {
       echo " * Convert all specified categories with their pages\n";
@@ -86,7 +86,7 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
     }
 
     echo " * ".count($categories)." categories will be imported\n";
-    ScriptUtils::separator();
+    ScriptingUtils::separator();
 
     $parentContent = "";
 
@@ -101,7 +101,7 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
       if ($categoryPages === null || count($categoryPages) === 0) {
         echo " (0 pages)\n";
         echo "Category ignored \n";
-        ScriptUtils::separator();
+        ScriptingUtils::separator();
         continue;
       }
 
@@ -117,7 +117,7 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
 
         if($pageContent === ""){
           echo " * * No content\n";
-          ScriptUtils::separator();
+          ScriptingUtils::separator();
           continue;
         }
 
@@ -141,7 +141,7 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
 
         if($phrictionPage->getContent() === ""){
           echo " * * No content\n";
-          ScriptUtils::separator();
+          ScriptingUtils::separator();
           continue;
         }
 
@@ -161,7 +161,7 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
         echo ' * imported as '.$category->getUrl()."\n";
         $parentContent = $parentContent."* [[{$category->getUrl()}|{$category->getTitle()}]]\n";
       }
-      ScriptUtils::separator();
+      ScriptingUtils::separator();
     }
 
     $parentCat = new PhrictionPage("Catégories", $parentContent, $config->wiki->url);

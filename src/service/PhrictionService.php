@@ -88,7 +88,7 @@ class PhrictionService extends Phobject {
     $api_parameters = array(
       'queryKey' => 'all',
       'constraints' => array(
-        'name' => ScriptUtils::removeAccents($image->getTitle()),
+        'name' => ScriptingUtils::removeAccents($image->getTitle()),
       ),
     );
 
@@ -101,7 +101,7 @@ class PhrictionService extends Phobject {
 
       $api_parameters = array(
         'data_base64' => $base64,
-        'name' => ScriptUtils::removeAccents($image->getTitle()),
+        'name' => ScriptingUtils::removeAccents($image->getTitle()),
       );
 
       $result = $this->client->callMethodSynchronous('file.upload', $api_parameters);
@@ -132,7 +132,7 @@ class PhrictionService extends Phobject {
    */
   private function getPhrictionId(PhrictionImage $image, $result): void {
     foreach ($result['data'] as $data) {
-      if ($data['fields']['name'] === ScriptUtils::removeAccents($image->getTitle())) {
+      if ($data['fields']['name'] === ScriptingUtils::removeAccents($image->getTitle())) {
         $image->setPrhictionId($data['id']);
         break;
       }

@@ -18,7 +18,7 @@ class AbstractPhrictionPage extends Phobject {
     $this->content = $content;
     $this->safeTitle = str_replace(' ', '_', $this->title);
     $this->origin = $wikiUrl."index.php/".$this->safeTitle;
-    $this->url = ScriptUtils::formatUrl($this->title);
+    $this->url = ScriptingUtils::formatUrl($this->title);
     if(mb_strtolower($title) === "accueil"){
       $this->url = "";
     }
