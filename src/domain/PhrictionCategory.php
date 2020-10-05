@@ -50,7 +50,7 @@ class PhrictionCategory extends AbstractPhrictionPage {
    * @return string
    */
   public function getUrl(): string {
-    return "Catégories/".parent::getUrl();
+    return "categories/".parent::getUrl();
   }
 
 

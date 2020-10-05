@@ -118,10 +118,10 @@ class ConverterService extends Phobject {
           } else {
             if (count($split) > 1) {
               $link = preg_replace( "/:catégorie:/i", "", $split[0]);
-              $newLink = "[[catégories/".ScriptingUtils::formatUrl($link)."|".$split[1]."]]";
+              $newLink = "[[categories/".ScriptingUtils::formatUrl($link)."|".$split[1]."]]";
             } else {
               $link = preg_replace( "/:catégorie:/i", "", $link);
-              $newLink = "[[catégories/".ScriptingUtils::formatUrl($link)."|".$link."]]";
+              $newLink = "[[categories/".ScriptingUtils::formatUrl($link)."|".$link."]]";
             }
           }
           $pageContent = str_replace($linkMatch[0][$i], $newLink, $pageContent);
