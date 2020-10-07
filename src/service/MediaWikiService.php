@@ -133,7 +133,7 @@ class MediaWikiService extends Phobject {
 
       if (count($data['query']) > 0 && count($data['query']['pages']) > 0) {
         foreach ($data['query']['pages'] as $page) {
-          if (in_array('imageinfo', $page) && $page['imageinfo'] !== null) {
+          if (array_key_exists('imageinfo', $page) && $page['imageinfo'] !== null) {
             $phImage = new PhrictionImage($page['title'], $page['imageinfo'][0]['url']);
             $result[] = $phImage;
             break;
