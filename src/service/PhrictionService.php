@@ -75,7 +75,7 @@ class PhrictionService extends Phobject {
         $result = $this->client->callMethodSynchronous('phriction.edit', $apiParameters);
         return $result != null && $result['status'];
       } else {
-        echo " * * vi No change \n";
+        echo " * * No change \n";
         return true;
       }
     } else {
@@ -138,5 +138,4 @@ class PhrictionService extends Phobject {
       }
     }
   }
-
 }
