@@ -42,7 +42,7 @@ class MediaWikiService extends Phobject {
   }
 
   public function getAllPages() {
-    $pagesUrl = $this->url."api.php?action=query&format=json&list=allpages&aplimit=100&apfrom=";
+    $pagesUrl = $this->url."api.php?action=query&format=json&list=allpages&aplimit=500&apfrom=";
 
     $result = new stdClass();
     $result->{'query-continue'} = new stdClass();
@@ -50,12 +50,17 @@ class MediaWikiService extends Phobject {
     $result->{'query-continue'}->allpages->apfrom = "";
 
     $pages = array();
+    $titles = array();
     do {
       list($responseBody) = $this->getFuture($pagesUrl.$result->{'query-continue'}->allpages->apfrom);
       $result = json_decode($responseBody);
 
       foreach ($result->query->allpages as $page) {
+        if(in_array($page->title, $titles)){
+          continue;
+        }
         $pages[] = $page;
+        $titles[] = $page->title;
       }
     } while (property_exists($result, "query-continue") && $result->{'query-continue'}->allpages->apfrom != null);
 
@@ -96,7 +101,7 @@ class MediaWikiService extends Phobject {
   }
 
   function getPageDataByTitle(string $title) {
-    $api = $this->url."/api.php?action=query&format=json&prop=revisions&rvprop=content&titles=".$title;
+    $api = $this->url."/api.php?action=query&format=json&prop=revisions&rvprop=content&titles=".urlencode($title);
     list($responseBody) = $this->getFuture($api);
     $data = json_decode($responseBody);
 

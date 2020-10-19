@@ -92,10 +92,19 @@ class PhrictionService extends Phobject {
       ),
     );
 
-    $result = $this->client->callMethodSynchronous('file.search', $api_parameters);
+    try {
+      $result = $this->client->callMethodSynchronous('file.search', $api_parameters);
+    } catch (Exception $ex) {
+      echo 'ERROR : '.$ex->getCode().' - '.$ex->getMessage().'\n';
+      $result = null;
+    }
+
+    $idImage = null;
     if ($result !== null && count($result['data']) > 0) {
-      $this->getPhrictionId($image, $result);
-    } else {
+      $idImage = $this->getPhrictionId($image->getTitle(), $result);
+    }
+
+    if ($idImage === null) {
       $imagedata = file_get_contents($image->getUrl());
       $base64 = base64_encode($imagedata);
 
@@ -119,23 +128,25 @@ class PhrictionService extends Phobject {
 
         $result = $this->client->callMethodSynchronous('file.search', $api_parameters);
         if ($result !== null && count($result['data']) > 0) {
-          $this->getPhrictionId($image, $result);
+          $idImage = $this->getPhrictionId($image->getTitle(), $result);
         }
       }
     }
+    $image->setPrhictionId($idImage);
     return $image;
   }
 
   /**
-   * @param PhrictionImage $image
+   * @param PhrictionImage $imageName
    * @param                $result
+   * @return string|null
    */
-  private function getPhrictionId(PhrictionImage $image, $result): void {
+  private function getPhrictionId(string $imageName, $result): ?string {
     foreach ($result['data'] as $data) {
-      if ($data['fields']['name'] === ScriptingUtils::removeAccents($image->getTitle())) {
-        $image->setPrhictionId($data['id']);
-        break;
+      if ($data['fields']['name'] === ScriptingUtils::removeAccents($imageName)) {
+        return $data['id'];
       }
     }
+    return null;
   }
 }

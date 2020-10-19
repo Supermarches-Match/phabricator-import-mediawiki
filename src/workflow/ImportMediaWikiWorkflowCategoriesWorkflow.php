@@ -123,6 +123,13 @@ final class ImportMediaWikiWorkflowCategoriesWorkflow
 
         $phrictionPage = new PhrictionPage($categoryPage->title, $pageContent, $config->wiki->url);
 
+        if (strpos($phrictionPage->getContent(), '#REDIRECTION [[') !== false || strpos($phrictionPage->getContent(), '#REDIRECT [[') !== false) {
+          echo " * * Redirection content (ignored)\n";
+          ScriptingUtils::separator();
+          continue;
+        }
+
+
         if (in_array($categoryPage->pageid, $pageFinished)) {
           $category->setContent($category->getContent()."* [[{$phrictionPage->getUrl()}|{$phrictionPage->getTitle()}]]\n");
           echo " * * $categoryPage->title already done\n";

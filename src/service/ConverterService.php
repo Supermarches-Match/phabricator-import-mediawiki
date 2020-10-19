@@ -53,9 +53,14 @@ class ConverterService extends Phobject {
     //Category
     '/(\[\[category:(([^|\]])+)(?:([^\]])*)\]\])(\s*)(\n*)/i' => "[[catégories/$2|Catégorie $2]]\n",
 
-
     //=> to ->
     '/(=(&gt;|>))/' => "->",
+
+    //Acteur spécifique
+    '/(?:\n*)(?:{{Acteur_)((?:[^{])+)}}/i' => "[[pages/$1|$1]]",
+
+    //Removing unicode
+    '/(\x{200e}|\x{200f})/u' => "",
 
     //Remove cartouche
     '/(?:\n*)(?:{{Cartouche(?:[^{])+)}}/i' => "",
@@ -69,8 +74,8 @@ class ConverterService extends Phobject {
   const EXTRACT_LINE_CONTENT_REGEX = '#((?:^\||^!|\|\||!!|\G))(?:([^|\n]*?)\|(?!\|))?(?:\n*)(.+?)(?:\n*)(?=^\||^!|\|\||!!|\z)#msi';
   const EXTRACT_CELL_ATTRIBUTE_REGEX = '/(?:((colspan=|rowspan=|bgcolor=|background-color:|color[:=])"?(#?\w+)"?)+)/';
   const EXTRACT_CATEGORY_REGEX = '/\[\[category:catégories\/([^\]]+)\]\]/i';
-  const EXTRACT_IMAGES_REGEX = '/(?:\[\[Image:|File:|Media:)([^\]|]+)(?:(?:[|][^\]|]*)*[\]]{2})/';
-  const EXTRACT_LINK_INTERNAL = '/\[\[((?!Category:|Image:|File:|Images:|Files:|http:|https:|Media:|catégories\/)(?:[^\]]+))\]\]/i';
+  const EXTRACT_IMAGES_REGEX = '/(?:\[\[Image:|File:|Media:|Fichier:)([^\]|]+)((?:[|][^\]|]*)*[\]]{2})/';
+  const EXTRACT_LINK_INTERNAL = '/\[\[((?!Category:|Image:|File:|Images:|Files:|Fichier:|http:|https:|Media:|catégories\/)(?:[^\]]+))\]\]/i';
 
 
   /**
@@ -111,16 +116,20 @@ class ConverterService extends Phobject {
 
           if (strpos(mb_strtolower($link), ':catégorie:') === false) {
             if (count($split) > 1) {
-              $newLink = "[[pages/".ScriptingUtils::formatUrl($split[0])."|".$split[1]."]]";
+              if (strpos(mb_strtolower($split[0]), 'pages/') !== false) {
+                $newLink = "[[".mb_strtolower($split[0])."|".$split[1]."]]";
+              }else {
+                $newLink = "[[pages/".ScriptingUtils::formatUrl($split[0])."|".$split[1]."]]";
+              }
             } else {
               $newLink = "[[pages/".ScriptingUtils::formatUrl($link)."|".$link."]]";
             }
           } else {
             if (count($split) > 1) {
-              $link = preg_replace( "/:catégorie:/i", "", $split[0]);
+              $link = preg_replace("/:catégorie:/i", "", $split[0]);
               $newLink = "[[categories/".ScriptingUtils::formatUrl($link)."|".$split[1]."]]";
             } else {
-              $link = preg_replace( "/:catégorie:/i", "", $link);
+              $link = preg_replace("/:catégorie:/i", "", $link);
               $newLink = "[[categories/".ScriptingUtils::formatUrl($link)."|".$link."]]";
             }
           }
@@ -137,11 +146,18 @@ class ConverterService extends Phobject {
       if ($imagesMatch !== null && count($imagesMatch) > 0) {
         foreach ($imagesMatch[1] as $image) {
           foreach ($phriction->getImages() as $phImage) {
-            if ($phImage->getTitle() === $image || str_replace(" ", "_", $phImage->getTitle()) === $image) {
+
+            if ($phImage->getTitle() === $image || str_replace(" ", "_", strtolower ($phImage->getTitle())) === str_replace(" ", "_", strtolower (strtolower($image)))) {
+              $replaceValue = $phImage->getPrhictionId();
+              $size = array();
+              if (preg_match_all('/[\|](\d*)px/', $imagesMatch[2][$j], $size)) {
+                $replaceValue = $replaceValue.', width='.$size[1][0];
+              }
+
               if (strpos($imagesMatch[0][$j], "[[") !== false) {
-                $pageContent = str_replace($imagesMatch[0][$j], "{F".$phImage->getPrhictionId()."}", $pageContent);
+                $pageContent = str_replace($imagesMatch[0][$j], "{F".$replaceValue."}", $pageContent);
               } else {
-                $pageContent = str_replace("[[".$imagesMatch[0][$j], "{F".$phImage->getPrhictionId()."}", $pageContent);
+                $pageContent = str_replace("[[".$imagesMatch[0][$j], "{F".$replaceValue."}", $pageContent);
               }
               break;
             }
@@ -175,10 +191,6 @@ class ConverterService extends Phobject {
 
     $sub = preg_replace_callback(self::EXTRACT_LINE_CONTENT_REGEX, 'ConverterService::processCells', $matches[3]);
 
-    if ($matches[3][0] == '!') {
-      $sub = preg_replace('/[<]td([^>]*)[>]/', "<th\$1\$2>", $sub);
-      $sub = preg_replace('/[<][\/]td[>]/', "</th>", $sub);
-    }
     return "<tr>$sub</tr>\n";
   }
 
@@ -198,6 +210,14 @@ class ConverterService extends Phobject {
       $i++;
     }
 
-    return '<td'.$attributes.'>'.trim($matches[3]).'</td>';
+    $cellType = 'td';
+    if(strpos($matches[1], '!') !== false){
+      $cellType = 'th';
+    }
+
+    if($attributes === '' && strpos($matches[3], '[[') === false && strpos($matches[3], ']]') !== false){
+      return '<'.$cellType.'>'.trim($matches[2].'|'.$matches[3]).'</'.$cellType.'>';
+    }
+    return '<'.$cellType.$attributes.'>'.trim($matches[3]).'</'.$cellType.'>';
   }
 }
