@@ -4,8 +4,12 @@ class ConverterService extends Phobject {
   const REPLACE_STANDARD_TAG_REGEX = array(
     //Remove html tag not use in phriction
     '#(?:<center>)+([\w\W]+?)(?:</center>)+#' => "\$1",
-    '#(?:<font(?:[^>])*>)+((?:[^>])*)(?:</font>)+#' => "\$1",
+    '#(?:<font(?:[^>])*>)([\w\W]+?)(?:</font>)+#' => "\$1",
+    '#(<font(?:[^>])*>)#' => "",
+    '#(<\/font>)#' => "",
     '#(?:<div(?:[^>])*>)+((?:[^>])*)(?:</div>)+#' => "\$1",
+    '#(?:<nowiki(?:[^>])*>)([\w\W]+?)(?:</nowiki>)+#' => "\$1",
+    '#(?:<span(?:[^>])*>)([\w\W]+?)(?:</span>)+#' => "\$1",
 
     //Remove <br> in header
     '/\n*(=+)([^\=<>]+)(<br>|<br\s*\/>)+(\s+)(=+)\n+/' => "\n\n\$1\$2\$4\$5\n",
@@ -24,7 +28,7 @@ class ConverterService extends Phobject {
     '#\n*<pre>([\w\W]+?)</pre>\n*#' => "\n\n```\$1```\n\n",
 
     // replace <blockquote> with > and ensure a blank line
-    '#\n*<blockquote>([\w\W]+?)</blockquote>\n*#' => "\n> $1\n\n",
+    '#n*(?:<blockquote(?:[^>])*>)([\w\W]+?)(?:</blockquote>)+#' => "\n> $1\n\n",
 
     // replace <source> with > and ensure a blank line
     '#\n*<source(?:\s*)(?:(lang=)"(\w*)")?>(?:\n*)([\w\W]+?)</source>\n*#' => "\n```\n$1$2\n$3\n```\n",
@@ -76,6 +80,7 @@ class ConverterService extends Phobject {
   const EXTRACT_CATEGORY_REGEX = '/\[\[category:catégories\/([^\]]+)\]\]/i';
   const EXTRACT_IMAGES_REGEX = '/(?:\[\[Image:|File:|Media:|Fichier:)([^\]|]+)((?:[|][^\]|]*)*[\]]{2})/';
   const EXTRACT_LINK_INTERNAL = '/\[\[((?!Category:|Image:|File:|Images:|Files:|Fichier:|http:|https:|Media:|catégories\/)(?:[^\]]+))\]\]/i';
+  const EXTRACT_SPECIFIC_OBJECT_AS_TITLE = '/^[\s]*(?:{{((?:[^{])+))}}/mi';
 
 
   /**
@@ -84,7 +89,7 @@ class ConverterService extends Phobject {
   public function __construct() {
   }
 
-  /**
+  /**tracert
    * @param PhrictionPage $phriction
    * @param array         $categories
    * @return mixed
@@ -163,6 +168,17 @@ class ConverterService extends Phobject {
             }
           }
           $j++;
+        }
+      }
+    }
+
+    $k = 0;
+    if (preg_match_all(self::EXTRACT_SPECIFIC_OBJECT_AS_TITLE, $pageContent, $titles)) {
+      if ($titles !== null && count($titles) > 0) {
+        foreach ($titles[1] as $title) {
+          $title = str_replace("_", " ", $title);
+          $pageContent = str_replace($titles[0][$k], "== ".$title." ==", $pageContent);
+          $k++;
         }
       }
     }

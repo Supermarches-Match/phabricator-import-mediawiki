@@ -137,7 +137,7 @@ final class ImportMediaWikiWorkflowPagesWorkflow
 
     $end = new DateTimeImmutable();
     $execution = $end->diff($start);
-    echo "Pages migrated: ".$pageFinished;
+    echo "Pages migrated: ".$pageFinished."\n";
     echo "Finished at: ".$end->format("Y-m-d H:i:s")."\n";
     echo "Executed in ".$execution->format("%ss %Imin %Hh");
     return 0;
