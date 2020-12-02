@@ -71,6 +71,7 @@ class ConverterService extends Phobject {
     '/(?:\n*)(?:{{Doc(?:[^{])+)}}/i' => "",
     '/(?:\n*)(?:{{tdm(?:[^{])+)}}/i' => "",
     '/\n*__NOTOC__(\n|\s)+/i' => "",
+    '/\n*__TOC__(\n|\s)+/i' => "",
   );
 
   const EXTRACT_TABLE_REGEX = '#^\{\|(.*?)(?:^\|\+(.*?))?(^(?:((?R))|.)*?)^\|}#msi';
